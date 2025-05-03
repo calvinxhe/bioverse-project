@@ -12,11 +12,19 @@ import {
 	TextField,
 	Typography,
 	Paper,
+	FormControlLabel,
+	Checkbox,
+	InputAdornment,
+	IconButton,
+	Tooltip,
 } from '@mui/material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
+import InputWithIcon from '../password-adornment';
 
 const loginSchema = z.object({
 	username: z.string().min(1, 'Username is required'),
 	password: z.string().min(1, 'Password is required'),
+	rememberMe: z.boolean().optional(),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -37,6 +45,7 @@ export default function LoginPage() {
 	const onSubmit = async (data: LoginFormData) => {
 		try {
 			if (data.username === 'admin' && data.password === 'admin123') {
+
 				router.push('/admin-panel');
 			} else if (data.username === 'user' && data.password === 'user123') {
 				router.push('/questionnaire-selection');
@@ -77,27 +86,30 @@ export default function LoginPage() {
 					)}
 
 					<form onSubmit={handleSubmit(onSubmit)}>
-						<TextField
-							fullWidth
-							label="Username"
-							variant="outlined"
-							error={!!errors.username}
-							helperText={errors.username?.message}
-							inputRef={usernameRef}
-							{...register('username')}
-							sx={{ mb: 2 }}
-							aria-label="Username"
-						/>
+						<Tooltip title="For admin use username: 'admin' and password: 'admin123'. For user use username: 'user' and password: 'user123'.">
+							<TextField
+								fullWidth
+								label="Username"
+								variant="outlined"
+								error={!!errors.username}
+								helperText={errors.username?.message}
+								inputRef={usernameRef}
+								{...register('username')}
+								sx={{ mb: 2 }}
+								aria-label="Username"
+							/>
+						</Tooltip>
 
-						<TextField
-							fullWidth
-							label="Password"
-							type="password"
-							variant="outlined"
+						<InputWithIcon 
+							aria-label="Password"
+							register={register}
 							error={!!errors.password}
 							helperText={errors.password?.message}
-							{...register('password')}
-							sx={{ mb: 2 }}
+						/>
+
+						<FormControlLabel
+							control={<Checkbox {...register('rememberMe')} />}
+							label="Remember me"
 						/>
 
 						<Button

@@ -1,6 +1,8 @@
+'use client';
+
 import { createContext, useContext, useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
 import Cookies from 'js-cookie';
+import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
 	isAuthenticated: boolean;

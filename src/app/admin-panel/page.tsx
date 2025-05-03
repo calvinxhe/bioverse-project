@@ -1,3 +1,9 @@
+import { AuthProvider } from "@/components/context/auth-context";
+
 export default function AdminPanel() {
-	return <div>Admin Panel</div>;
+	return (
+		<AuthProvider>
+			<div>Admin Panel</div>
+		</AuthProvider>
+	);
 }
