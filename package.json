@@ -1,27 +1,19 @@
 {
-  "name": "bioverse-project",
-  "version": "0.1.0",
-  "private": true,
+  "name": "bioverse-questionnaire",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Database seeding script for Bioverse questionnaire",
+  "main": "seed_database.js",
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "seed": "node seed_database.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "migrate": "node migrate_to_supabase.js"
   },
   "dependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "next": "15.3.1"
+    "@supabase/supabase-js": "^2.39.3",
+    "csv-parse": "^5.5.3"
   },
   "devDependencies": {
-    "typescript": "^5",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
-    "eslint": "^9",
-    "eslint-config-next": "15.3.1",
-    "@eslint/eslintrc": "^3"
+    "jest": "^29.7.0"
   }
 }
