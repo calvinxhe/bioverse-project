@@ -19,7 +19,9 @@ import {
 	Tooltip,
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
+import { useSetLoginCookie } from '@/hooks/setLoginCookie';
 import InputWithIcon from '../password-adornment';
+import type { adminLoginProps } from '@/hooks/setLoginCookie';
 
 const loginSchema = z.object({
 	username: z.string().min(1, 'Username is required'),
@@ -33,6 +35,8 @@ export default function LoginPage() {
 	const router = useRouter();
 	const [error, setError] = useState<string>('');
 	const usernameRef = useRef<HTMLInputElement>(null);
+	const [loginData, setLoginData] = useState<adminLoginProps | null>(null);
+	const setLoginCookie = useSetLoginCookie(loginData || { username: '', password: '', rememberMe: false });
 
 	const {
 		register,
@@ -44,10 +48,17 @@ export default function LoginPage() {
 
 	const onSubmit = async (data: LoginFormData) => {
 		try {
-			if (data.username === 'admin' && data.password === 'admin123') {
+			setLoginData({
+				username: data.username,
+				password: data.password,
+				rememberMe: data.rememberMe || false
+			});
 
+			if (data.username === 'admin' && data.password === 'admin123') {
+				setLoginCookie();
 				router.push('/admin-panel');
 			} else if (data.username === 'user' && data.password === 'user123') {
+				setLoginCookie();
 				router.push('/questionnaire-selection');
 			} else {
 				setError('Invalid username or password');
