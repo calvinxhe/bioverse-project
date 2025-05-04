@@ -23,9 +23,10 @@ export interface SidebarProps {
 
 const drawerWidth = 240;
 
-const navItems = (isAdmin: boolean) => [
+const navItems = (isAdmin: boolean, isAuthenticated: boolean) => [
 	{ label: 'Home', icon: <HomeIcon />, path: '/' },
 	...(isAdmin ? [{ label: 'Admin', icon: <HomeIcon />, path: '/admin-panel' }] : [{ label: 'Questions', icon: <HomeIcon />, path: '/questionnaire-selection' }]),
+    ...(isAuthenticated ? [{ label: 'Logout', icon: <HomeIcon />, path: '/logout' }] : []),
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ isAdmin }) => {
