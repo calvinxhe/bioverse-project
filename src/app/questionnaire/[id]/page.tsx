@@ -24,8 +24,8 @@ import { use } from 'react';
 interface Question {
 	id: string;
 	question: string;
-	type: string;
-	options: string[] | null;
+	type: 'input' | 'mcq';
+	options?: string[];
 }
 
 interface Questionnaire {
@@ -61,6 +61,7 @@ export default function QuestionnairePage({ params }: { params: Promise<{ id: st
 					.select(`
 						*,
 						questions:questionnaire_questions(
+							priority,
 							question:questions(*)
 						)
 					`)
@@ -69,10 +70,12 @@ export default function QuestionnairePage({ params }: { params: Promise<{ id: st
 
 				if (questionnaireError) throw questionnaireError;
 
-				// Transform the data to match our interface
+				// Transform the data to match our interface and sort by priority
 				const transformedData = {
 					...questionnaireData,
-					questions: questionnaireData.questions.map((q: any) => q.question),
+					questions: questionnaireData.questions
+						.sort((a: any, b: any) => a.priority - b.priority)
+						.map((q: any) => q.question),
 				};
 
 				setQuestionnaire(transformedData);
@@ -190,7 +193,7 @@ export default function QuestionnairePage({ params }: { params: Promise<{ id: st
 								{index + 1}. {question.question}
 							</Typography>
 
-							{question.type === 'text' && (
+							{question.type === 'input' && (
 								<TextField
 									fullWidth
 									multiline
@@ -198,11 +201,12 @@ export default function QuestionnairePage({ params }: { params: Promise<{ id: st
 									value={existingAnswer?.answer || ''}
 									onChange={(e) => handleAnswerChange(question.id, e.target.value)}
 									required
+									placeholder="Type your answer here..."
 								/>
 							)}
 
-							{question.type === 'radio' && question.options && (
-								<FormControl component="fieldset">
+							{question.type === 'mcq' && question.options && (
+								<FormControl component="fieldset" fullWidth>
 									<RadioGroup
 										value={existingAnswer?.answer || ''}
 										onChange={(e) => handleAnswerChange(question.id, e.target.value)}
@@ -216,36 +220,6 @@ export default function QuestionnairePage({ params }: { params: Promise<{ id: st
 											/>
 										))}
 									</RadioGroup>
-								</FormControl>
-							)}
-
-							{question.type === 'checkbox' && question.options && (
-								<FormControl component="fieldset">
-									<FormLabel component="legend">Select all that apply</FormLabel>
-									{question.options.map((option) => (
-										<FormControlLabel
-											key={option}
-											control={
-												<Checkbox
-													checked={
-														Array.isArray(existingAnswer?.answer)
-															? existingAnswer.answer.includes(option)
-															: false
-													}
-													onChange={(e) => {
-														const currentAnswers = Array.isArray(existingAnswer?.answer)
-															? existingAnswer.answer
-															: [];
-														const newAnswers = e.target.checked
-															? [...currentAnswers, option]
-															: currentAnswers.filter((a) => a !== option);
-														handleAnswerChange(question.id, newAnswers);
-													}}
-												/>
-											}
-											label={option}
-										/>
-									))}
 								</FormControl>
 							)}
 						</Paper>
