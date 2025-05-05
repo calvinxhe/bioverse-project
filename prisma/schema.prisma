@@ -38,7 +38,7 @@ model Question {
 model QuestionnaireQuestion {
 	questionnaireId String @db.Uuid
 	questionId      String @db.Uuid
-	orderIndex      Int
+	orderIn        Int    @default(0)
 
 	// Relations
 	questionnaire   Questionnaire @relation(fields: [questionnaireId], references: [id])
@@ -84,7 +84,7 @@ model UserAnswer {
 }
 
 model User {
-  id    Int     @id @default(autoincrement())
-  name  String
-  email String  @unique
+	id    Int     @id @default(autoincrement())
+	name  String
+	email String  @unique
 }

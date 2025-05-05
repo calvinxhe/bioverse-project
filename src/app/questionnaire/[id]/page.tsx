@@ -12,13 +12,11 @@ import {
 	TextField,
 	FormControl,
 	FormControlLabel,
-	Checkbox,
 	Radio,
 	RadioGroup,
-	FormLabel,
 	Alert,
 } from '@mui/material';
-import { createClient } from '@supabase/supabase-js';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { use } from 'react';
 
 interface Question {
@@ -40,6 +38,9 @@ interface Answer {
 	answer: string | string[];
 }
 
+// Fixed demo user ID for development
+const DEMO_USER_ID = '00000000-0000-0000-0000-000000000000';
+
 export default function QuestionnairePage({ params }: { params: Promise<{ id: string }> }) {
 	const { id } = use(params);
 	const [questionnaire, setQuestionnaire] = useState<Questionnaire | null>(null);
@@ -47,55 +48,35 @@ export default function QuestionnairePage({ params }: { params: Promise<{ id: st
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const router = useRouter();
-	const supabase = createClient(
-		process.env.NEXT_PUBLIC_SUPABASE_URL!,
-		process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-	);
+	const supabase = createClientComponentClient();
 
 	useEffect(() => {
 		const fetchQuestionnaire = async () => {
 			try {
-				// Fetch questionnaire with its questions
-				const { data: questionnaireData, error: questionnaireError } = await supabase
-					.from('questionnaires')
-					.select(`
-						*,
-						questions:questionnaire_questions(
-							priority,
-							question:questions(*)
-						)
-					`)
-					.eq('id', id)
-					.single();
+				console.log('Fetching questionnaire with ID:', id);
+				const response = await fetch(`/api/questionnaire/${id}`);
+				const data = await response.json();
 
-				if (questionnaireError) throw questionnaireError;
+				if (!response.ok) {
+					throw new Error(data.error || 'Failed to fetch questionnaire');
+				}
 
-				// Transform the data to match our interface and sort by priority
-				const transformedData = {
-					...questionnaireData,
-					questions: questionnaireData.questions
-						.sort((a: any, b: any) => a.priority - b.priority)
-						.map((q: any) => q.question),
-				};
-
-				setQuestionnaire(transformedData);
+				console.log('Received questionnaire data:', data);
+				setQuestionnaire(data);
 
 				// Fetch existing answers if any
-				const { data: userData } = await supabase.auth.getUser();
-				if (userData.user) {
-					const { data: existingAnswers } = await supabase
-						.from('user_answers')
-						.select('*')
-						.eq('user_id', userData.user.id);
+				const { data: existingAnswers } = await supabase
+					.from('user_answers')
+					.select('*')
+					.eq('userQuestionnaireId', DEMO_USER_ID);
 
-					if (existingAnswers) {
-						setAnswers(
-							existingAnswers.map((ans: any) => ({
-								questionId: ans.question_id,
-								answer: ans.answer,
-							}))
-						);
-					}
+				if (existingAnswers) {
+					setAnswers(
+						existingAnswers.map((ans: any) => ({
+							questionId: ans.questionId,
+							answer: ans.answer,
+						}))
+					);
 				}
 			} catch (error) {
 				console.error('Error fetching questionnaire:', error);
@@ -122,14 +103,11 @@ export default function QuestionnairePage({ params }: { params: Promise<{ id: st
 
 	const handleSubmit = async () => {
 		try {
-			const { data: userData } = await supabase.auth.getUser();
-			if (!userData.user) throw new Error('User not authenticated');
-
 			// Create or update user questionnaire
 			const { data: userQuestionnaire, error: userQuestionnaireError } = await supabase
 				.from('user_questionnaires')
 				.upsert({
-					userId: userData.user.id,
+					userId: DEMO_USER_ID,
 					questionnaireId: id,
 					status: 'completed',
 					completedAt: new Date().toISOString(),
