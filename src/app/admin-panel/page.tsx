@@ -3,7 +3,6 @@
 import { AuthProvider, useAuth } from '@/components/context/auth-context';
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Sidebar } from '@/components/sidebar';
 import { AdminDashboard } from '@/components/pages/admin-dashboard';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Box } from '@mui/material';
@@ -23,16 +22,13 @@ function AdminPanelContent() {
 	}, [checkAuth, router]);
 
 	return (
-		<Box sx={{ display: 'flex', minHeight: '100vh' }}>
-			<Sidebar isAdmin={true} />
-			<Box sx={{ flexGrow: 1, overflow: 'auto' }}>
-				<AdminDashboard />
-			</Box>
+		<Box sx={{ p: 3 }}>
+			<AdminDashboard />
 		</Box>
 	);
 }
 
-const AdminPanel = () => {
+export default function AdminPanel() {
 	return (
 		<QueryClientProvider client={queryClient}>
 			<AuthProvider>
@@ -40,6 +36,4 @@ const AdminPanel = () => {
 			</AuthProvider>
 		</QueryClientProvider>
 	);
-};
-
-export default AdminPanel;
+}
