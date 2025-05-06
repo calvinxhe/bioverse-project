@@ -18,10 +18,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import { useRouter } from 'next/navigation';
 import NextLink from 'next/link';
 import Cookies from 'js-cookie';
-
-export interface SidebarProps {
-	isAdmin: boolean;
-}
+import { useAuth } from './context/auth-context';
 
 const drawerWidth = 240;
 
@@ -38,10 +35,10 @@ const navItems = (isAdmin: boolean, isAuthenticated: boolean) => [
 	...(isAuthenticated ? [{ label: 'Logout', icon: <LogoutIcon />, path: '/', isLogout: true }] : []),
 ];
 
-export const Sidebar: React.FC<SidebarProps> = ({ isAdmin }) => {
+export const Sidebar: React.FC = () => {
 	const isDesktop = useMediaQuery('(min-width: 900px)');
 	const router = useRouter();
-	const [isAuthenticated, setIsAuthenticated] = useState(true);
+	const { isAuthenticated, isAdmin, setIsAuthenticated } = useAuth();
 	const removeAuthCookies = useRemoveAuthCookies();
 
 	const [open, setOpen] = useState(false);

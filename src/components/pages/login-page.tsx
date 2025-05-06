@@ -19,6 +19,8 @@ import {
 import { useSetLoginCookie } from '@/hooks/setLoginCookie';
 import InputWithIcon from '../password-adornment';
 import type { adminLoginProps } from '@/hooks/setLoginCookie';
+import { useAuth } from '../context/auth-context';
+import Cookies from 'js-cookie';
 
 const loginSchema = z.object({
 	username: z.string().min(1, 'Username is required'),
@@ -34,6 +36,7 @@ export default function LoginPage() {
 	const usernameRef = useRef<HTMLInputElement>(null);
 	const [loginData, setLoginData] = useState<adminLoginProps | null>(null);
 	const setLoginCookie = useSetLoginCookie(loginData || { username: '', password: '', rememberMe: false });
+	const { setIsAuthenticated, setIsAdmin } = useAuth();
 
 	const {
 		register,
@@ -45,6 +48,10 @@ export default function LoginPage() {
 
 	const onSubmit = async (data: LoginFormData) => {
 		try {
+			// Clear any existing cookies first
+			Cookies.remove('isAuthenticated');
+			Cookies.remove('isAdmin');
+
 			setLoginData({
 				username: data.username,
 				password: data.password,
@@ -52,10 +59,18 @@ export default function LoginPage() {
 			});
 
 			if (data.username === 'admin' && data.password === 'admin123') {
-				setLoginCookie();
+				// Set admin cookies and state
+				Cookies.set('isAuthenticated', 'true');
+				Cookies.set('isAdmin', 'true');
+				setIsAuthenticated(true);
+				setIsAdmin(true);
 				router.push('/admin-panel');
 			} else if (data.username === 'user' && data.password === 'user123') {
-				setLoginCookie();
+				// Set user cookies and state
+				Cookies.set('isAuthenticated', 'true');
+				Cookies.set('isAdmin', 'false');
+				setIsAuthenticated(true);
+				setIsAdmin(false);
 				router.push('/questionnaire-selection');
 			} else {
 				setError('Invalid username or password');

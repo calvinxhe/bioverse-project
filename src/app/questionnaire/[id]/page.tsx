@@ -20,6 +20,7 @@ import {
 } from '@mui/material';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { use } from 'react';
+import { useAuth } from '@/components/context/auth-context';
 
 interface Question {
 	id: string;
@@ -64,8 +65,26 @@ export default function QuestionnairePage({ params }: { params: Promise<{ id: st
 	const [previousAttempts, setPreviousAttempts] = useState<UserQuestionnaire[]>([]);
 	const router = useRouter();
 	const supabase = createClientComponentClient();
+	const { isAuthenticated, isAdmin } = useAuth();
 
 	useEffect(() => {
+		// Wait for auth state to be determined
+		if (isAuthenticated === undefined) {
+			return;
+		}
+
+		// Only redirect if we're certain about the auth state
+		if (isAuthenticated === false) {
+			router.push('/');
+			return;
+		}
+
+		// Only redirect admin if we're certain about both auth and admin state
+		if (isAuthenticated === true && isAdmin === true) {
+			router.push('/admin-panel');
+			return;
+		}
+
 		const fetchQuestionnaire = async () => {
 			try {
 				console.log('Fetching questionnaire with ID:', id);
@@ -128,7 +147,7 @@ export default function QuestionnairePage({ params }: { params: Promise<{ id: st
 		};
 
 		fetchQuestionnaire();
-	}, [id, supabase]);
+	}, [id, supabase, isAuthenticated, isAdmin, router]);
 
 	const startNewAttempt = async () => {
 		try {
