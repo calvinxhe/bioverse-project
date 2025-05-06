@@ -13,6 +13,14 @@ import {
 	TableHead,
 	TableRow,
 	Paper,
+	Dialog,
+	DialogTitle,
+	DialogContent,
+	DialogActions,
+	Divider,
+	List,
+	ListItem,
+	ListItemText,
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
@@ -54,6 +62,7 @@ type DashboardStats = {
 export const AdminDashboard = () => {
 	const theme = useTheme();
 	const supabase = createClientComponentClient();
+	const [selectedQuestionnaire, setSelectedQuestionnaire] = useState<UserQuestionnaire | null>(null);
 
 	// Fetch user questionnaires
 	const { data: userQuestionnaires, isLoading } = useQuery<UserQuestionnaire[]>({
@@ -114,6 +123,21 @@ export const AdminDashboard = () => {
 		}
 		
 		return { color, displayStatus };
+	};
+
+	const handleViewAnswers = (questionnaire: UserQuestionnaire) => {
+		setSelectedQuestionnaire(questionnaire);
+	};
+
+	const handleCloseModal = () => {
+		setSelectedQuestionnaire(null);
+	};
+
+	const formatAnswer = (answer: any, type: string) => {
+		if (type === 'multiple_choice') {
+			return Array.isArray(answer) ? answer.join(', ') : answer;
+		}
+		return answer?.toString() || 'No answer';
 	};
 
 	return (
@@ -209,10 +233,7 @@ export const AdminDashboard = () => {
 											<Button
 												variant="contained"
 												size="small"
-												onClick={() => {
-													// Handle view answers
-													console.log('View answers for:', questionnaire);
-												}}
+												onClick={() => handleViewAnswers(questionnaire)}
 											>
 												View Answers
 											</Button>
@@ -224,6 +245,59 @@ export const AdminDashboard = () => {
 					</TableBody>
 				</Table>
 			</TableContainer>
+
+			{/* Answers Modal */}
+			<Dialog
+				open={!!selectedQuestionnaire}
+				onClose={handleCloseModal}
+				maxWidth="md"
+				fullWidth
+			>
+				{selectedQuestionnaire && (
+					<>
+						<DialogTitle>
+							<Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+								<Typography variant="h6">
+									{selectedQuestionnaire.questionnaire?.title || 'Unknown Questionnaire'}
+								</Typography>
+								<Typography variant="body2" color="textSecondary">
+									Submitted: {new Date(selectedQuestionnaire.startedAt).toLocaleString()}
+								</Typography>
+							</Box>
+						</DialogTitle>
+						<DialogContent>
+							<Box sx={{ mt: 2 }}>
+								<Typography variant="subtitle1" gutterBottom>
+									User ID: {selectedQuestionnaire.userId}
+								</Typography>
+								<Divider sx={{ my: 2 }} />
+								<List>
+									{selectedQuestionnaire.answers.map((answer) => (
+										<ListItem key={answer.id} sx={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+											<ListItemText
+												primary={answer.question.question}
+												secondary={
+													<Box sx={{ mt: 1 }}>
+														<Typography variant="body2" color="textSecondary">
+															Answer: {formatAnswer(answer.answer, answer.question.type)}
+														</Typography>
+														<Typography variant="caption" color="textSecondary">
+															Answered: {new Date(answer.answeredAt).toLocaleString()}
+														</Typography>
+													</Box>
+												}
+											/>
+										</ListItem>
+									))}
+								</List>
+							</Box>
+						</DialogContent>
+						<DialogActions>
+							<Button onClick={handleCloseModal}>Close</Button>
+						</DialogActions>
+					</>
+				)}
+			</Dialog>
 		</Box>
 	);
 }; 
