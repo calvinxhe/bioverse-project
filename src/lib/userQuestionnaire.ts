@@ -4,6 +4,8 @@ const prisma = new PrismaClient();
 
 export type QuestionnaireStatus = 'not_started' | 'in_progress' | 'completed';
 
+export type AnswerValue = string | number | boolean | string[] | number[] | null;
+
 export async function startQuestionnaire(userId: string, questionnaireId: string) {
 	return prisma.userQuestionnaire.create({
 		data: {
@@ -31,7 +33,7 @@ export async function startQuestionnaire(userId: string, questionnaireId: string
 export async function saveAnswer(
 	userQuestionnaireId: string,
 	questionId: string,
-	answer: any
+	answer: AnswerValue
 ) {
 	// Start a transaction to ensure data consistency
 	return prisma.$transaction(async (prismaClient: Prisma.TransactionClient) => {

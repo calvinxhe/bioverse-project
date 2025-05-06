@@ -15,12 +15,15 @@ import FormControl from '@mui/material/FormControl';
 import TextField from '@mui/material/TextField';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import { UseFormRegister } from 'react-hook-form';
 
-export default function InputWithIcon({ register, error, helperText }: { 
-	register: any;
+interface InputWithIconProps {
+	register: UseFormRegister<any>;
 	error?: boolean;
 	helperText?: string;
-}) {
+}
+
+export default function InputWithIcon({ register, error, helperText }: InputWithIconProps) {
 	const [showPassword, setShowPassword] = React.useState(false);
 
 	const handleClickShowPassword = () => setShowPassword((show) => !show);
