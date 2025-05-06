@@ -84,7 +84,7 @@ model UserAnswer {
 }
 
 model User {
-	id    Int     @id @default(autoincrement())
-	name  String
-	email String  @unique
+  id    Int     @id @default(autoincrement())
+  name  String
+  email String  @unique
 }

@@ -15,6 +15,7 @@ import {
 	Radio,
 	RadioGroup,
 	Alert,
+	Snackbar,
 } from '@mui/material';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { use } from 'react';
@@ -47,6 +48,9 @@ export default function QuestionnairePage({ params }: { params: Promise<{ id: st
 	const [answers, setAnswers] = useState<Answer[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const [isComplete, setIsComplete] = useState(false);
+	const [saving, setSaving] = useState(false);
+	const [showSaveMessage, setShowSaveMessage] = useState(false);
 	const router = useRouter();
 	const supabase = createClientComponentClient();
 
@@ -64,19 +68,33 @@ export default function QuestionnairePage({ params }: { params: Promise<{ id: st
 				console.log('Received questionnaire data:', data);
 				setQuestionnaire(data);
 
-				// Fetch existing answers if any
-				const { data: existingAnswers } = await supabase
-					.from('user_answers')
-					.select('*')
-					.eq('userQuestionnaireId', DEMO_USER_ID);
+				// Check if questionnaire is already completed
+				const { data: userQuestionnaire } = await supabase
+					.from('user_questionnaires')
+					.select('id, is_complete')
+					.eq('userId', DEMO_USER_ID)
+					.eq('questionnaireId', id)
+					.single();
 
-				if (existingAnswers) {
-					setAnswers(
-						existingAnswers.map((ans: any) => ({
-							questionId: ans.questionId,
-							answer: ans.answer,
-						}))
-					);
+				if (userQuestionnaire?.is_complete) {
+					setIsComplete(true);
+				}
+
+				// Fetch existing answers if any
+				if (userQuestionnaire) {
+					const { data: existingAnswers } = await supabase
+						.from('user_answers')
+						.select('questionId, answer')
+						.eq('userQuestionnaireId', userQuestionnaire.id);
+
+					if (existingAnswers) {
+						setAnswers(
+							existingAnswers.map((ans: any) => ({
+								questionId: ans.questionId,
+								answer: ans.answer,
+							}))
+						);
+					}
 				}
 			} catch (error) {
 				console.error('Error fetching questionnaire:', error);
@@ -89,15 +107,89 @@ export default function QuestionnairePage({ params }: { params: Promise<{ id: st
 		fetchQuestionnaire();
 	}, [id, supabase]);
 
+	const saveAnswers = async (newAnswers: Answer[]) => {
+		try {
+			setSaving(true);
+			
+			// First check if a user questionnaire record exists
+			const { data: existingUserQuestionnaire } = await supabase
+				.from('user_questionnaires')
+				.select('id')
+				.eq('userId', DEMO_USER_ID)
+				.eq('questionnaireId', id)
+				.single();
+
+			let userQuestionnaireId;
+
+			if (existingUserQuestionnaire) {
+				// Update existing record
+				const { data: updatedQuestionnaire, error: updateError } = await supabase
+					.from('user_questionnaires')
+					.update({
+						status: 'in_progress',
+						is_complete: false,
+						lastUpdatedAt: new Date().toISOString(),
+					})
+					.eq('id', existingUserQuestionnaire.id)
+					.select()
+					.single();
+
+				if (updateError) throw updateError;
+				userQuestionnaireId = updatedQuestionnaire.id;
+			} else {
+				// Create new record
+				const { data: newQuestionnaire, error: createError } = await supabase
+					.from('user_questionnaires')
+					.insert({
+						userId: DEMO_USER_ID,
+						questionnaireId: id,
+						status: 'in_progress',
+						is_complete: false,
+					})
+					.select()
+					.single();
+
+				if (createError) throw createError;
+				userQuestionnaireId = newQuestionnaire.id;
+			}
+
+			// Save all answers using upsert with the correct unique key fields
+			const { error: upsertError } = await supabase
+				.from('user_answers')
+				.upsert(
+					newAnswers.map((answer) => ({
+						userQuestionnaireId,
+						questionId: answer.questionId,
+						answer: answer.answer,
+					})),
+					{
+						onConflict: 'userQuestionnaireId,questionId'
+					}
+				);
+
+			if (upsertError) throw upsertError;
+			setShowSaveMessage(true);
+		} catch (error) {
+			console.error('Error saving answers:', error);
+			setError('Failed to save answers');
+		} finally {
+			setSaving(false);
+		}
+	};
+
 	const handleAnswerChange = (questionId: string, value: string | string[]) => {
 		setAnswers((prev) => {
 			const existingAnswerIndex = prev.findIndex((a) => a.questionId === questionId);
-			if (existingAnswerIndex >= 0) {
-				const newAnswers = [...prev];
-				newAnswers[existingAnswerIndex] = { questionId, answer: value };
-				return newAnswers;
-			}
-			return [...prev, { questionId, answer: value }];
+			const newAnswers = existingAnswerIndex >= 0
+				? prev.map((a, index) => index === existingAnswerIndex ? { questionId, answer: value } : a)
+				: [...prev, { questionId, answer: value }];
+			
+			// Auto-save after a short delay
+			const timeoutId = setTimeout(() => {
+				saveAnswers(newAnswers);
+			}, 1000);
+
+			return newAnswers;
 		});
 	};
 
@@ -111,6 +203,7 @@ export default function QuestionnairePage({ params }: { params: Promise<{ id: st
 					questionnaireId: id,
 					status: 'completed',
 					completedAt: new Date().toISOString(),
+					is_complete: true,
 				})
 				.select()
 				.single();
@@ -127,6 +220,7 @@ export default function QuestionnairePage({ params }: { params: Promise<{ id: st
 			);
 
 			await Promise.all(answerPromises);
+			setIsComplete(true);
 			router.push('/questionnaire-selection');
 		} catch (error) {
 			console.error('Error submitting answers:', error);
@@ -159,6 +253,12 @@ export default function QuestionnairePage({ params }: { params: Promise<{ id: st
 				<Typography variant="body1" color="text.secondary" paragraph>
 					{questionnaire.description}
 				</Typography>
+			)}
+
+			{isComplete && (
+				<Alert severity="success" sx={{ mb: 3 }}>
+					You have already completed this questionnaire. You can submit it again if you wish.
+				</Alert>
 			)}
 
 			<Box component="form" sx={{ mt: 4 }}>
@@ -209,12 +309,19 @@ export default function QuestionnairePage({ params }: { params: Promise<{ id: st
 						variant="contained"
 						color="primary"
 						onClick={handleSubmit}
-						disabled={answers.length === 0}
+						disabled={answers.length === 0 || saving}
 					>
-						Submit Answers
+						{saving ? 'Saving...' : 'Submit Answers'}
 					</Button>
 				</Box>
 			</Box>
+
+			<Snackbar
+				open={showSaveMessage}
+				autoHideDuration={3000}
+				onClose={() => setShowSaveMessage(false)}
+				message="Answers saved automatically"
+			/>
 		</Container>
 	);
 } 
