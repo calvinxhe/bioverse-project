@@ -17,8 +17,14 @@ import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { UseFormRegister } from 'react-hook-form';
 
+interface LoginFormData {
+	username: string;
+	password: string;
+	rememberMe?: boolean;
+}
+
 interface InputWithIconProps {
-	register: UseFormRegister<any>;
+	register: UseFormRegister<LoginFormData>;
 	error?: boolean;
 	helperText?: string;
 }

@@ -14,11 +14,8 @@ import {
 	Paper,
 	FormControlLabel,
 	Checkbox,
-	InputAdornment,
-	IconButton,
 	Tooltip,
 } from '@mui/material';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { useSetLoginCookie } from '@/hooks/setLoginCookie';
 import InputWithIcon from '../password-adornment';
 import type { adminLoginProps } from '@/hooks/setLoginCookie';
@@ -63,7 +60,7 @@ export default function LoginPage() {
 			} else {
 				setError('Invalid username or password');
 			}
-		} catch (err) {
+		} catch {
 			setError('An error occurred during login');
 		}
 	};
