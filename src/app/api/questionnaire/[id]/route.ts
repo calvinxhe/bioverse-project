@@ -20,7 +20,8 @@ export async function GET(
 						id,
 						question,
 						type,
-						options
+						options,
+						isMany
 					)
 				)
 			`)
