@@ -6,9 +6,28 @@ import {
 	Typography,
 	useTheme,
 	Button,
+	Table,
+	TableBody,
+	TableCell,
+	TableContainer,
+	TableHead,
+	TableRow,
+	Paper,
 } from '@mui/material';
-import { DataGrid, type GridColDef, type GridRenderCellParams, type GridValueGetterParams } from '@mui/x-data-grid';
 import { useQuery } from '@tanstack/react-query';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+
+type Answer = {
+	id: string;
+	userQuestionnaireId: string;
+	questionId: string;
+	answer: any;
+	answeredAt: string;
+	question: {
+		type: string;
+		question: string;
+	};
+};
 
 type UserQuestionnaire = {
 	id: string;
@@ -18,17 +37,12 @@ type UserQuestionnaire = {
 	startedAt: string;
 	completedAt: string | null;
 	lastUpdatedAt: string;
+	is_complete: boolean;
 	questionnaire: {
 		title: string;
+		description: string | null;
 	};
-	answers: Array<{
-		questionId: string;
-		answer: any;
-		answeredAt: string;
-		question: {
-			question: string;
-		};
-	}>;
+	answers: Answer[];
 };
 
 type DashboardStats = {
@@ -39,16 +53,29 @@ type DashboardStats = {
 
 export const AdminDashboard = () => {
 	const theme = useTheme();
+	const supabase = createClientComponentClient();
 
 	// Fetch user questionnaires
 	const { data: userQuestionnaires, isLoading } = useQuery<UserQuestionnaire[]>({
 		queryKey: ['userQuestionnaires'],
 		queryFn: async () => {
-			const response = await fetch('/api/admin/questionnaires');
-			if (!response.ok) {
+			const { data, error } = await supabase
+				.from('user_questionnaires')
+				.select(`
+					*,
+					questionnaire:questionnaires(*),
+					answers:user_answers(
+						*,
+						question:questions(*)
+					)
+				`)
+				.order('startedAt', { ascending: false });
+
+			if (error) {
 				throw new Error('Failed to fetch questionnaires');
 			}
-			return response.json();
+
+			return data as UserQuestionnaire[];
 		},
 	});
 
@@ -64,74 +91,30 @@ export const AdminDashboard = () => {
 
 		return {
 			totalSubmissions: userQuestionnaires.length,
-			completeSubmissions: userQuestionnaires.filter(q => q.status === 'completed').length,
-			incompleteSubmissions: userQuestionnaires.filter(q => q.status !== 'completed').length,
+			completeSubmissions: userQuestionnaires.filter(q => q.is_complete).length,
+			incompleteSubmissions: userQuestionnaires.filter(q => !q.is_complete).length,
 		};
 	}, [userQuestionnaires]);
 
-	// Define columns for the table
-	const columns: GridColDef<UserQuestionnaire>[] = [
-		{
-			field: 'questionnaire.title',
-			headerName: 'Questionnaire',
-			width: 200,
-			valueGetter: (params: GridValueGetterParams<UserQuestionnaire>) => params.row.questionnaire.title,
-		},
-		{
-			field: 'userId',
-			headerName: 'User ID',
-			width: 150,
-		},
-		{
-			field: 'status',
-			headerName: 'Status',
-			width: 120,
-			renderCell: (params: GridRenderCellParams<UserQuestionnaire>) => (
-				<Box
-					sx={{
-						backgroundColor:
-							params.value === 'completed'
-								? theme.palette.success.light
-								: theme.palette.warning.light,
-						borderRadius: '4px',
-						padding: '4px 8px',
-						display: 'inline-block',
-					}}
-				>
-					{params.value}
-				</Box>
-			),
-		},
-		{
-			field: 'startedAt',
-			headerName: 'Started At',
-			width: 150,
-			valueGetter: (params: GridValueGetterParams<UserQuestionnaire>) => new Date(params.value).toLocaleString(),
-		},
-		{
-			field: 'completedAt',
-			headerName: 'Completed At',
-			width: 150,
-			valueGetter: (params: GridValueGetterParams<UserQuestionnaire>) => params.value ? new Date(params.value).toLocaleString() : '-',
-		},
-		{
-			field: 'actions',
-			headerName: 'Actions',
-			width: 120,
-			renderCell: (params: GridRenderCellParams<UserQuestionnaire>) => (
-				<Button
-					variant="contained"
-					size="small"
-					onClick={() => {
-						// Handle view answers
-						console.log('View answers for:', params.row);
-					}}
-				>
-					View Answers
-				</Button>
-			),
-		},
-	];
+	const getStatusDisplay = (questionnaire: UserQuestionnaire) => {
+		const isComplete = questionnaire.is_complete;
+		const hasAnswers = questionnaire.answers?.length > 0;
+		
+		let color = theme.palette.warning.light;
+		let displayStatus = questionnaire.status;
+		
+		if (isComplete) {
+			color = theme.palette.success.light;
+			displayStatus = 'Completed';
+		} else if (hasAnswers) {
+			color = theme.palette.info.light;
+			displayStatus = 'In Progress';
+		} else {
+			displayStatus = 'Not Started';
+		}
+		
+		return { color, displayStatus };
+	};
 
 	return (
 		<Box sx={{ p: 3 }}>
@@ -174,14 +157,73 @@ export const AdminDashboard = () => {
 			</Box>
 
 			{/* Submissions Table */}
-			<Box sx={{ height: 400, width: '100%' }}>
-				<DataGrid
-					rows={userQuestionnaires || []}
-					columns={columns}
-					loading={isLoading}
-					disableRowSelectionOnClick
-				/>
-			</Box>
+			<TableContainer component={Paper}>
+				<Table>
+					<TableHead>
+						<TableRow>
+							<TableCell>Questionnaire</TableCell>
+							<TableCell>User ID</TableCell>
+							<TableCell>Status</TableCell>
+							<TableCell>Started At</TableCell>
+							<TableCell>Completed At</TableCell>
+							<TableCell>Answers</TableCell>
+							<TableCell>Actions</TableCell>
+						</TableRow>
+					</TableHead>
+					<TableBody>
+						{isLoading ? (
+							<TableRow>
+								<TableCell colSpan={7} align="center">Loading...</TableCell>
+							</TableRow>
+						) : userQuestionnaires?.length === 0 ? (
+							<TableRow>
+								<TableCell colSpan={7} align="center">No submissions found</TableCell>
+							</TableRow>
+						) : (
+							userQuestionnaires?.map((questionnaire) => {
+								const { color, displayStatus } = getStatusDisplay(questionnaire);
+								return (
+									<TableRow key={questionnaire.id}>
+										<TableCell>{questionnaire.questionnaire?.title || 'Unknown'}</TableCell>
+										<TableCell>{questionnaire.userId}</TableCell>
+										<TableCell>
+											<Box
+												sx={{
+													backgroundColor: color,
+													borderRadius: '4px',
+													padding: '4px 8px',
+													display: 'inline-block',
+												}}
+											>
+												{displayStatus}
+											</Box>
+										</TableCell>
+										<TableCell>
+											{questionnaire.startedAt ? new Date(questionnaire.startedAt).toLocaleString() : '-'}
+										</TableCell>
+										<TableCell>
+											{questionnaire.completedAt ? new Date(questionnaire.completedAt).toLocaleString() : '-'}
+										</TableCell>
+										<TableCell>{questionnaire.answers?.length || 0}</TableCell>
+										<TableCell>
+											<Button
+												variant="contained"
+												size="small"
+												onClick={() => {
+													// Handle view answers
+													console.log('View answers for:', questionnaire);
+												}}
+											>
+												View Answers
+											</Button>
+										</TableCell>
+									</TableRow>
+								);
+							})
+						)}
+					</TableBody>
+				</Table>
+			</TableContainer>
 		</Box>
 	);
 }; 
