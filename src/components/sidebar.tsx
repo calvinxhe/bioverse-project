@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import HomeIcon from '@mui/icons-material/Home';
+import LogoutIcon from '@mui/icons-material/Logout';
 import { useRouter } from 'next/navigation';
 import NextLink from 'next/link';
 
@@ -26,12 +27,13 @@ const drawerWidth = 240;
 const navItems = (isAdmin: boolean, isAuthenticated: boolean) => [
 	{ label: 'Home', icon: <HomeIcon />, path: '/' },
 	...(isAdmin ? [{ label: 'Admin', icon: <HomeIcon />, path: '/admin-panel' }] : [{ label: 'Questions', icon: <HomeIcon />, path: '/questionnaire-selection' }]),
-    ...(isAuthenticated ? [{ label: 'Logout', icon: <HomeIcon />, path: '/logout' }] : []),
+	...(isAuthenticated ? [{ label: 'Logout', icon: <LogoutIcon />, path: '/' }] : []),
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ isAdmin }) => {
 	const isDesktop = useMediaQuery('(min-width: 900px)');
 	const router = useRouter();
+	const [isAuthenticated, setIsAuthenticated] = useState(true); // You can replace this with your actual auth state
 
 	const [open, setOpen] = useState(false);
 	const toggleDrawer = () => setOpen((prev) => !prev);
@@ -39,7 +41,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isAdmin }) => {
 	const links = (
 		<Box sx={{ width: isDesktop ? drawerWidth : 250 }} role="presentation" onClick={!isDesktop ? toggleDrawer : undefined}>
 			<List>
-				{navItems(isAdmin).map(({ label, icon, path }) => (
+				{navItems(isAdmin, isAuthenticated).map(({ label, icon, path }) => (
 					<ListItem disablePadding key={label}>
 						<Link
 							component={NextLink}
